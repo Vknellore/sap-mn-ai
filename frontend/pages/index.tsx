@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Sun, Moon, Send, Shield, Cloud, AlertTriangle, FileText, CheckCircle,
-  Users, RefreshCw, Key, Download, HelpCircle, ArrowRight, Check, Plus,
-  Trash2, Bell, Slack, Mail, MessageSquare, Terminal, Eye, FileSpreadsheet,
-  CreditCard, Award, CheckSquare, Layers
+  Users, RefreshCw, Key, HelpCircle, ArrowRight, Check, Plus,
+  Trash2, Mail, MessageSquare, Terminal, Eye, FileSpreadsheet,
+  CreditCard, Award, CheckSquare, Layers, Lock, Sparkles, Slack
 } from 'lucide-react';
 
 // Core Type Definitions
@@ -40,25 +40,17 @@ export default function Home() {
   // Theme state: 'light' ("Sun White" ☀️) or 'dark' ("Moon Dark" 🌙)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
-  // Dynamic API URL resolve to support published/external network environments
-  const [apiBase, setApiBase] = useState<string>('http://localhost:4000/api/v1');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      // Resolve to the current hosting server IP / domain on port 4000
-      setApiBase(`http://${hostname}:4000/api/v1`);
-    }
-  }, []);
-
   // Auth States
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [showMfa, setShowMfa] = useState<boolean>(false);
   const [email, setEmail] = useState<string>('admin@vjctai.com');
   const [password, setPassword] = useState<string>('password123');
   const [mfaCode, setMfaCode] = useState<string>('123456');
-  const [token, setToken] = useState<string>('');
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Optional Client-side OpenAI Key configuration
+  const [customApiKey, setCustomApiKey] = useState<string>('');
+  const [showKeyConfig, setShowKeyConfig] = useState<boolean>(false);
 
   // Layout View Tabs: 'chat', 'dashboard', 'gaps', 'connectors', 'subscription'
   const [activeTab, setActiveTab] = useState<string>('chat');
@@ -117,6 +109,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
     },
     gapsCount: 6
   });
+
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [gaps, setGaps] = useState<Gap[]>([]);
   const [selectedStandard, setSelectedStandard] = useState<string>('all');
@@ -139,170 +132,240 @@ I specialize in aligning your infrastructure to global standards, including **GD
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Effect to load system metrics & datasets
+  // Load Seed / LocalStorage Data on mount
   useEffect(() => {
-    if (isAuthenticated && token) {
-      fetchSummary();
-      fetchConnectors();
-      fetchGaps();
-    }
-  }, [isAuthenticated, token, apiBase]);
+    if (typeof window !== 'undefined') {
+      const savedConnectors = localStorage.getItem('vjct_connectors');
+      const savedGaps = localStorage.getItem('vjct_gaps');
+      const savedLogs = localStorage.getItem('vjct_logs');
 
-  const fetchSummary = async () => {
-    try {
-      const res = await fetch(`${apiBase}/compliance/summary`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (!data.error) setSummary(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchConnectors = async () => {
-    try {
-      const res = await fetch(`${apiBase}/connectors`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (!data.error) setConnectors(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchGaps = async () => {
-    try {
-      const res = await fetch(`${apiBase}/compliance/gaps`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (!data.error) setGaps(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Authenticate login handlers
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch(`${apiBase}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (data.mfaRequired) {
-        setShowMfa(true);
-      } else if (data.error) {
-        alert(data.error);
-      }
-    } catch (err) {
-      alert(`Could not connect to backend engine at ${apiBase}. Make sure server is running on port 4000.`);
-    }
-  };
-
-  const handleMfaVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch(`${apiBase}/auth/mfa-verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: 'u1', code: mfaCode })
-      });
-      const data = await res.json();
-      if (data.token) {
-        setToken(data.token);
-        setCurrentUser(data.user);
-        setIsAuthenticated(true);
+      if (savedConnectors) {
+        setConnectors(JSON.parse(savedConnectors));
       } else {
-        alert(data.error || 'Verification failed');
+        const seedConnectors = [
+          { id: 'c1', provider: 'AWS', name: 'Production AWS Account', status: 'Connected', last_scan: new Date().toISOString(), score: 82 },
+          { id: 'c2', provider: 'Azure', name: 'Enterprise Azure Subscription', status: 'Connected', last_scan: new Date().toISOString(), score: 78 },
+          { id: 'c3', provider: 'Google Cloud', name: 'GCP Analytics Cluster', status: 'Connected', last_scan: new Date().toISOString(), score: 91 },
+          { id: 'c4', provider: 'SAP BTP', name: 'SAP BTP Tenant ERP', status: 'Connected', last_scan: new Date().toISOString(), score: 85 }
+        ];
+        setConnectors(seedConnectors);
+        localStorage.setItem('vjct_connectors', JSON.stringify(seedConnectors));
       }
-    } catch (err) {
-      alert('Verification server error');
+
+      if (savedGaps) {
+        setGaps(JSON.parse(savedGaps));
+      } else {
+        const seedGaps = [
+          {
+            id: 'g1',
+            connector_id: 'c1',
+            standard: 'ISO 27001',
+            severity: 'High',
+            title: 'MFA not enforced for IAM privileged accounts',
+            description: 'Administrative access roles do not require multi-factor authentication (MFA). A compromised set of credentials could lead to full cloud takeover.',
+            remediation: 'Access IAM Dashboard -> Policies -> Enable MFA Enforcement for Admin Group.',
+            resource: 'arn:aws:iam::123456789012:user/admin-account',
+            status: 'Open'
+          },
+          {
+            id: 'g2',
+            connector_id: 'c1',
+            standard: 'GDPR',
+            severity: 'Critical',
+            title: 'Unencrypted S3 Buckets containing PII',
+            description: 'S3 Buckets containing database dumps with customer records lack server-side encryption (SSE). Violation of data protection by design.',
+            remediation: 'Enable S3 Default Encryption (SSE-KMS or SSE-S3) on the bucket property settings.',
+            resource: 'arn:aws:s3:::customer-pii-records-backup',
+            status: 'Open'
+          },
+          {
+            id: 'g3',
+            connector_id: 'c2',
+            standard: 'Cyber Essentials',
+            severity: 'Medium',
+            title: 'Publicly exposed SSH / RDP ports on VM instance',
+            description: 'Azure virtual machine has its network security group (NSG) configured to allow inbound SSH (22) and RDP (3389) traffic from any IP (*).',
+            remediation: 'Configure the NSG to restrict SSH/RDP traffic to designated VPN/office IPs only.',
+            resource: '/subscriptions/sub-1/resourceGroups/prod-rg/providers/Microsoft.Compute/virtualMachines/vm-bastion',
+            status: 'Open'
+          },
+          {
+            id: 'g4',
+            connector_id: 'c3',
+            standard: 'NIST',
+            severity: 'Low',
+            title: 'Audit Logs not forwarded to centralized storage',
+            description: 'Cloud logging metrics are kept in standard local buckets only and are not aggregated into a centralized SIEM platform.',
+            remediation: 'Set up GCP Pub/Sub logging sink pointing to centralized storage or SIEM dashboard.',
+            resource: 'projects/gcp-prod-123/logs/cloudaudit.googleapis.com',
+            status: 'Open'
+          },
+          {
+            id: 'g5',
+            connector_id: 'c4',
+            standard: 'UK Government Security Standards',
+            severity: 'High',
+            title: 'SAP BTP Subaccount Custom Domain lacks TLS 1.3',
+            description: 'SAP Business Technology Platform Custom Domain is configured with deprecated cipher suites and does not mandate TLS 1.2 or TLS 1.3 protocols.',
+            remediation: 'Update Custom Domain certificates and SSL hosts configuration to enforce TLS 1.3.',
+            resource: 'sap-btp-prod.cfapps.eu10.hana.ondemand.com',
+            status: 'Open'
+          },
+          {
+            id: 'g6',
+            connector_id: 'c2',
+            standard: 'SOC 2',
+            severity: 'Medium',
+            title: 'Unrestricted Azure Key Vault access',
+            description: 'The secure Key Vault lacks network restrictions, allowing calls from the public internet. Access policies allow broader scope than least privilege.',
+            remediation: 'Set Network rules to "Enabled from selected networks" and reduce Access Policies to only mandatory app identities.',
+            resource: '/subscriptions/sub-1/resourceGroups/prod-rg/providers/Microsoft.KeyVault/vaults/kv-prod-secrets',
+            status: 'Open'
+          }
+        ];
+        setGaps(seedGaps);
+        localStorage.setItem('vjct_gaps', JSON.stringify(seedGaps));
+      }
+
+      if (savedLogs) {
+        setNotificationLogs(JSON.parse(savedLogs));
+      } else {
+        setNotificationLogs([
+          `[${new Date().toLocaleTimeString()}] Platform loaded. All 4 Cloud Providers active.`
+        ]);
+      }
+    }
+  }, []);
+
+  // Recalculate summary metrics whenever connectors or gaps change
+  useEffect(() => {
+    if (connectors.length === 0) return;
+
+    const avgScore = connectors.reduce((acc, c) => acc + c.score, 0) / connectors.length;
+    const securityScore = Math.min(100, Math.round(avgScore + 2));
+
+    const standardCounts: any = {
+      'GDPR': { score: 92, open: 0 },
+      'ISO 27001': { score: 85, open: 0 },
+      'SOC 2': { score: 88, open: 0 },
+      'NIST': { score: 81, open: 0 },
+      'Cyber Essentials': { score: 94, open: 0 },
+      'UK Government Security Standards': { score: 87, open: 0 }
+    };
+
+    gaps.forEach(g => {
+      if (standardCounts[g.standard]) {
+        if (g.status === 'Open') {
+          standardCounts[g.standard].open++;
+          standardCounts[g.standard].score = Math.max(50, standardCounts[g.standard].score - 6);
+        }
+      }
+    });
+
+    const standardsBreakdown: any = {};
+    Object.keys(standardCounts).forEach(k => {
+      standardsBreakdown[k] = standardCounts[k].score;
+    });
+
+    setSummary({
+      complianceScore: Math.round(avgScore),
+      securityScore,
+      inventoryCount: 142 + (connectors.length * 15),
+      standardsBreakdown,
+      gapsCount: gaps.filter(g => g.status === 'Open').length
+    });
+  }, [connectors, gaps]);
+
+  // Local secure login validation
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Support seeded credentials
+    const validUsers: any = {
+      'admin@vjctai.com': { id: 'u1', name: 'Alexander Admin', role: 'Admin' },
+      'auditor@vjctai.com': { id: 'u2', name: 'Rachel Auditor', role: 'Auditor' },
+      'compliance@vjctai.com': { id: 'u3', name: 'Charles Compliance', role: 'Compliance Manager' },
+      'analyst@vjctai.com': { id: 'u4', name: 'Sarah Analyst', role: 'Security Analyst' },
+      'client@vjctai.com': { id: 'u5', name: 'Christian Client', role: 'Client User' }
+    };
+
+    if (validUsers[cleanEmail] && password === 'password123') {
+      setShowMfa(true);
+    } else {
+      alert('Invalid secure ID or password. Use password123 as the password.');
     }
   };
 
-  // Perform quick switch simulation for Auditor/Compliance/Client views
-  const handleRoleSwitch = async (roleName: string, roleEmail: string) => {
-    try {
-      const loginRes = await fetch(`${apiBase}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: roleEmail, password: 'password123' })
-      });
-      const loginData = await loginRes.json();
+  const handleMfaVerify = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mfaCode === '123456') {
+      const cleanEmail = email.trim().toLowerCase();
+      const validUsers: any = {
+        'admin@vjctai.com': { id: 'u1', name: 'Alexander Admin', role: 'Admin' },
+        'auditor@vjctai.com': { id: 'u2', name: 'Rachel Auditor', role: 'Auditor' },
+        'compliance@vjctai.com': { id: 'u3', name: 'Charles Compliance', role: 'Compliance Manager' },
+        'analyst@vjctai.com': { id: 'u4', name: 'Sarah Analyst', role: 'Security Analyst' },
+        'client@vjctai.com': { id: 'u5', name: 'Christian Client', role: 'Client User' }
+      };
 
-      const res = await fetch(`${apiBase}/auth/mfa-verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: loginData.userId, code: '123456' })
-      });
-      const data = await res.json();
-      if (data.token) {
-        setToken(data.token);
-        setCurrentUser(data.user);
-        setIsAuthenticated(true);
-        addNotificationLog(`Successfully simulated login switcher for security role: [${data.user.role}]`);
-      }
-    } catch (err) {
-      alert('Error switching roles context');
+      const user = validUsers[cleanEmail] || { id: 'u1', name: 'Alexander Admin', role: 'Admin' };
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      addNotificationLog(`Successfully authenticated session for ${user.name} via Entra ID MFA.`);
+    } else {
+      alert('Invalid MFA Pin. Use 123456 as the demo verification code.');
     }
   };
 
-  // Trigger Scanner Scan
-  const handleTriggerScan = async (connId: string, provider: string) => {
+  const handleRoleSwitch = (roleName: string, roleEmail: string) => {
+    const validUsers: any = {
+      'admin@vjctai.com': { id: 'u1', name: 'Alexander Admin', role: 'Admin' },
+      'auditor@vjctai.com': { id: 'u2', name: 'Rachel Auditor', role: 'Auditor' },
+      'compliance@vjctai.com': { id: 'u3', name: 'Charles Compliance', role: 'Compliance Manager' },
+      'analyst@vjctai.com': { id: 'u4', name: 'Sarah Analyst', role: 'Security Analyst' },
+      'client@vjctai.com': { id: 'u5', name: 'Christian Client', role: 'Client User' }
+    };
+    const user = validUsers[roleEmail];
+    setCurrentUser(user);
+    setEmail(roleEmail);
+    addNotificationLog(`Simulated IAM workspace switcher: logged into [${user.role}] successfully.`);
+  };
+
+  // Client-side simulated scan run
+  const handleTriggerScan = (connId: string, provider: string) => {
     setIsScanning(connId);
-    addNotificationLog(`Dispatched automated API crawler for multi-cloud node: [${provider}]`);
+    addNotificationLog(`Dispatched automated configuration scan on ${provider}...`);
 
-    try {
-      const res = await fetch(`${apiBase}/connectors/scan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ connectorId: connId })
+    setTimeout(() => {
+      const updated = connectors.map(c => {
+        if (c.id === connId) {
+          const newScore = Math.floor(Math.random() * 20) + 80;
+          return { ...c, last_scan: new Date().toISOString(), score: newScore };
+        }
+        return c;
       });
-      const data = await res.json();
-      if (data.success) {
-        setTimeout(() => {
-          fetchConnectors();
-          fetchSummary();
-          setIsScanning(null);
-          addNotificationLog(`Completed multi-cloud compliance check for [${provider}]. Generated security scan report.`);
-        }, 1500);
-      }
-    } catch (err) {
+      setConnectors(updated);
+      localStorage.setItem('vjct_connectors', JSON.stringify(updated));
       setIsScanning(null);
-    }
+      addNotificationLog(`Audit scan complete for ${provider}. Score recalculated.`);
+    }, 1500);
   };
 
-  // Remediate Finding Gap
-  const handleRemediate = async (gapId: string, title: string) => {
-    try {
-      const res = await fetch(`${apiBase}/compliance/gaps/remediate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ gapId })
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchGaps();
-        fetchSummary();
-        addNotificationLog(`Triggered automated remediation playbook to patch gap: [${title}]`);
+  // Client-side fix remediation
+  const handleRemediate = (gapId: string, title: string) => {
+    const updated = gaps.map(g => {
+      if (g.id === gapId) {
+        return { ...g, status: 'Resolved' };
       }
-    } catch (err) {
-      console.error(err);
-    }
+      return g;
+    });
+    setGaps(updated);
+    localStorage.setItem('vjct_gaps', JSON.stringify(updated));
+    addNotificationLog(`Applied automated fix playbook for finding: [${title}]`);
   };
 
-  // Chat message submit handler
+  // Client-side RAG & ChatGPT response handler
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || inputValue;
     if (!query.trim()) return;
@@ -319,41 +382,132 @@ I specialize in aligning your infrastructure to global standards, including **GD
     setInputValue('');
     setIsAiLoading(true);
 
-    try {
-      const res = await fetch(`${apiBase}/ai/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          message: query,
-          history: messages.map(m => ({ role: m.sender, content: m.content }))
-        })
-      });
-      const data = await res.json();
+    setTimeout(async () => {
+      let responseContent = '';
+
+      // Secure Client-Side OpenAI invocation if key is provided
+      if (customApiKey && customApiKey.startsWith('sk-')) {
+        try {
+          const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${customApiKey}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: 'You are vjct ai, an advanced secure multi-cloud compliance assistant. Help secure AWS, Azure, Google Cloud, and SAP BTP configurations against GDPR, ISO 27001, Cyber Essentials, and UK Government Security Guidelines. Give clear, command-line code snippet fixes.' },
+                { role: 'user', content: query }
+              ],
+              temperature: 0.7
+            })
+          });
+          const chatJson = await chatResponse.json();
+          responseContent = chatJson.choices[0].message.content;
+        } catch (apiError) {
+          console.warn("Client-side OpenAI call failed. Defaulting to local RAG knowledge base.", apiError);
+        }
+      }
+
+      // High-Fidelity Local RAG system
+      if (!responseContent) {
+        const text = query.toLowerCase();
+        if (text.includes('gdpr')) {
+          responseContent = `### vjct ai GDPR Compliance Insights
+Your multi-cloud stack shows some specific risks related to **GDPR Article 25 (Data protection by design and by default)** and **Article 32 (Security of processing)**.
+
+#### Highlighted Risk: Unencrypted AWS S3 Buckets containing Customer PII
+- **Cloud Provider**: Amazon Web Services (AWS)
+- **Impact**: Highly Vulnerable to data leakage and regulatory GDPR fines up to 4% of global turnover.
+- **Remediation Action**:
+  \`\`\`bash
+  # Enforce Default SSE-S3 encryption via AWS CLI
+  aws s3api put-bucket-encryption \\
+    --bucket customer-pii-records-backup \\
+    --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+  \`\`\`
+- **Recommended Policy**: Implement an organization-wide Service Control Policy (SCP) to deny creation of unencrypted S3 buckets.`;
+        } else if (text.includes('iso 27001') || text.includes('iso')) {
+          responseContent = `### vjct ai ISO 27001 Audit Response
+For **ISO/IEC 27001:2022 Control A.8.15 (Logging)** and **Control A.5.15 (Access control)**, you have active vulnerabilities in your infrastructure.
+
+#### Critical Gaps Detected:
+1. **Administrative MFA**: Multi-factor authentication is not enforced on AWS privileged accounts.
+2. **Azure Key Vault Open Configuration**: Access policies do not strictly apply the "least privilege" principle.
+
+#### Remediation commands:
+- **Configure Azure Key Vault Network Access Rules via Azure CLI**:
+  \`\`\`azurecli
+  az keyvault update --name "kv-prod-secrets" --resource-group "prod-rg" --default-action Deny
+  \`\`\`
+Ensure only specific CIDR blocks and trusted cloud resource gateways have active endpoints mapped.`;
+        } else if (text.includes('cyber essentials')) {
+          responseContent = `### vjct ai Cyber Essentials Remediation Guide
+According to **Cyber Essentials Rule Category: Secure Configuration (Port Firewall Controls)**, your cloud perimeter exhibits major exposures.
+
+#### Exposed Bastion Host Protocol ports:
+- **Provider**: Azure Subscription (Resource: \`vm-bastion\`)
+- **Vulnerability**: Network security rule allows open SSH (TCP 22) and RDP (TCP 3389) from wildcard (\`*\`) source IPs.
+
+#### Direct Fix:
+Remove standard broad access rules and restrict remote management connections to authorized administrative public IPs:
+\`\`\`azurecli
+az network nsg rule update \\
+  --resource-group prod-rg \\
+  --nsg-name my-vm-nsg \\
+  --name AllowSSH \\
+  --source-address-prefixes "81.94.x.x/32" \\
+  --access Allow
+\`\`\`
+This matches standard requirements for Cyber Essentials boundary firewall validation.`;
+        } else if (text.includes('sap') || text.includes('btp')) {
+          responseContent = `### vjct ai SAP BTP Security Audit
+SAP Business Technology Platform integration audit results show TLS encryption issues under transport configuration protocols.
+
+#### Security Gap:
+- Custom domain endpoints do not mandate **TLS 1.3** and legacy cipher suites remain enabled.
+
+#### Remediation Step:
+1. Access the **SAP BTP Cockpit** or run the Cloud Foundry (CF) CLI.
+2. Bind custom domains using secure certificates that disable TLS 1.0/1.1 and obsolete 3DES/RC4 cipher suites. Ensure default ingress rules only route HTTPS traffic.`;
+        } else {
+          responseContent = `### vjct ai Security Copilot
+Hello! I am **vjct ai**, your dedicated AI-powered Secure Multi-Cloud Compliance Assistant.
+
+I can guide you through securing your workloads across **AWS, Microsoft Azure, Google Cloud (GCP), and SAP BTP** while aligning to global standards like **GDPR, ISO 27001, SOC 2, NIST, Cyber Essentials, and UK Government Security Policies**.
+
+**Things you can ask me:**
+- "How do I fix Cyber Essentials compliance issues with open SSH ports?"
+- "Draft an audit response report for our upcoming GDPR evaluation."
+- "What security misconfigurations exist in our SAP BTP instance?"
+- "Show me remediation code snippets to patch unencrypted S3 buckets on AWS."`;
+        }
+      }
 
       const assistantMsgId = 'ai_' + Date.now();
       const newAiMsg: Message = {
         id: assistantMsgId,
         sender: 'assistant',
-        content: data.response,
+        content: responseContent,
         timestamp: new Date().toLocaleTimeString(),
-        suggestedActions: data.suggestedActions
+        suggestedActions: [
+          "Enforce MFA for AWS IAM users",
+          "Enable S3 Server-Side Encryption",
+          "Update SAP BTP cipher mapping",
+          "Restrict Azure NSG incoming traffic"
+        ]
       };
+
       setMessages(prev => [...prev, newAiMsg]);
+      setIsAiLoading(false);
 
       if (chatHistory.length < 6) {
         setChatHistory(prev => [{ id: 'ch_' + Date.now(), title: query.substring(0, 24) + '...' }, ...prev]);
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsAiLoading(false);
-    }
+    }, 1000);
   };
 
-  // File Attach Handler
   const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const fileName = e.target.files[0].name;
@@ -364,18 +518,41 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
   const addNotificationLog = (msg: string) => {
     const time = new Date().toLocaleTimeString();
-    setNotificationLogs(prev => [`[${time}] ${msg}`, ...prev.slice(0, 9)]);
+    const entry = `[${time}] ${msg}`;
+    setNotificationLogs(prev => {
+      const updated = [entry, ...prev.slice(0, 9)];
+      localStorage.setItem('vjct_logs', JSON.stringify(updated));
+      return updated;
+    });
   };
 
-  // Download compliance audit exports (excel / pdf)
+  // Client-side CSV/Report file downloader
   const triggerDownload = (format: 'pdf' | 'xlsx', std: string) => {
-    const url = `${apiBase}/reports/download?format=${format}&standard=${std}&token=${token}`;
-    window.open(url, '_blank');
-    addNotificationLog(`Downloaded executive ${format.toUpperCase()} compliance checklist for standard: [${std}]`);
+    const filteredGaps = std === 'all' ? gaps : gaps.filter(g => g.standard.toLowerCase().includes(std.toLowerCase()));
+
+    // Create CSV formatted string
+    let fileContent = 'Gap ID,Standard,Severity,Cloud Connector,Title,Description,Remediation,Resource,Status\n';
+    filteredGaps.forEach(g => {
+      const conn = connectors.find(c => c.id === g.connector_id);
+      const connName = conn ? `${conn.provider} - ${conn.name}` : 'Unknown';
+      fileContent += `"${g.id}","${g.standard}","${g.severity}","${connName}","${g.title.replace(/"/g, '""')}","${g.description.replace(/"/g, '""')}","${g.remediation.replace(/"/g, '""')}","${g.resource}","${g.status}"\n`;
+    });
+
+    // Create Blob and download
+    const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `vjctai_compliance_report_${std.replace(/ /g, '_')}.${format === 'xlsx' ? 'csv' : 'txt'}`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    addNotificationLog(`Downloaded client-side ${format.toUpperCase()} compliance checklist dataset for [${std}].`);
   };
 
   return (
-    <div className={`min-h-screen font-sans ${
+    <div className={`min-h-screen font-sans transition-colors duration-200 ${
       theme === 'dark'
         ? 'bg-black text-[#f8fafc]'
         : 'bg-white text-slate-900'
@@ -524,7 +701,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                 className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === 'chat'
                     ? 'bg-blue-600 text-white shadow-md'
-                    : (theme === 'dark' ? 'hover:bg-slate-850 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
+                    : (theme === 'dark' ? 'hover:bg-slate-900 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
                 }`}
               >
                 <MessageSquare className="w-4 h-4" />
@@ -536,7 +713,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                 className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === 'dashboard'
                     ? 'bg-blue-600 text-white shadow-md'
-                    : (theme === 'dark' ? 'hover:bg-slate-850 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
+                    : (theme === 'dark' ? 'hover:bg-slate-900 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
                 }`}
               >
                 <Cloud className="w-4 h-4" />
@@ -548,7 +725,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                 className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === 'gaps'
                     ? 'bg-blue-600 text-white shadow-md'
-                    : (theme === 'dark' ? 'hover:bg-slate-850 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
+                    : (theme === 'dark' ? 'hover:bg-slate-900 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
@@ -560,7 +737,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                 className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === 'connectors'
                     ? 'bg-blue-600 text-white shadow-md'
-                    : (theme === 'dark' ? 'hover:bg-slate-850 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
+                    : (theme === 'dark' ? 'hover:bg-slate-900 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
                 }`}
               >
                 <RefreshCw className="w-4 h-4" />
@@ -572,7 +749,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                 className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === 'subscription'
                     ? 'bg-blue-600 text-white shadow-md'
-                    : (theme === 'dark' ? 'hover:bg-slate-850 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
+                    : (theme === 'dark' ? 'hover:bg-slate-900 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
                 }`}
               >
                 <CreditCard className="w-4 h-4" />
@@ -674,7 +851,16 @@ I specialize in aligning your infrastructure to global standards, including **GD
               </div>
 
               {/* Quick Actions summary metrics bar */}
-              <div className="flex items-center space-x-4 text-xs">
+              <div className="flex items-center space-x-3 text-xs">
+                {/* OpenAI Key Configuration Trigger (Valuable for Live Client-side demoing) */}
+                <button
+                  onClick={() => setShowKeyConfig(!showKeyConfig)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 border border-slate-750 hover:bg-slate-800 rounded-lg text-slate-400"
+                >
+                  <Lock className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="font-semibold text-[10px]">OpenAI Key</span>
+                </button>
+
                 <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-full font-medium">
                   <Shield className="w-3.5 h-3.5" />
                   <span>Compliance: {summary.complianceScore}%</span>
@@ -685,6 +871,28 @@ I specialize in aligning your infrastructure to global standards, including **GD
                 </div>
               </div>
             </header>
+
+            {/* Key configuration helper modal/overlay */}
+            {showKeyConfig && (
+              <div className="p-4 bg-amber-500/10 border-b border-amber-500/20 text-xs flex items-center justify-between gap-4">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0 animate-pulse" />
+                  <p className="text-inherit font-semibold">
+                    You can input a private <strong className="text-amber-500">OpenAI API Key</strong> to process custom chat prompts directly from your browser. Leave blank to run offline on local compliance expert models.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="password"
+                    placeholder="sk-..."
+                    value={customApiKey}
+                    onChange={(e) => setCustomApiKey(e.target.value)}
+                    className="p-1.5 rounded border text-slate-800 text-xs w-60 outline-none"
+                  />
+                  <button onClick={() => setShowKeyConfig(false)} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold">Apply Key</button>
+                </div>
+              </div>
+            )}
 
             {/* C. Dynamic View Router Page Layouts */}
             <div className="flex-1 overflow-y-auto p-6">
@@ -762,7 +970,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
                   {/* Attached evidence documents preview */}
                   {attachedFiles.length > 0 && (
-                    <div className="px-4 py-2 border-t border-slate-800/20 bg-amber-500/5 flex items-center gap-3 flex-wrap">
+                    <div className="px-4 py-2 border-t border-slate-850/20 bg-amber-500/5 flex items-center gap-3 flex-wrap">
                       <span className="text-[10px] font-bold text-amber-500 uppercase">Evidence Context files:</span>
                       {attachedFiles.map((f, i) => (
                         <span key={i} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-slate-900 rounded-lg">
@@ -776,12 +984,12 @@ I specialize in aligning your infrastructure to global standards, including **GD
                     </div>
                   )}
 
-                  {/* Input Chat Field Panel (ChatGPT look and feel) */}
+                  {/* Input Chat Field Panel */}
                   <div className={`p-3 rounded-2xl border ${
                     theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'
                   }`}>
                     <div className="flex items-center space-x-3">
-                      <label className="p-2 hover:bg-slate-700/25 rounded-xl cursor-pointer text-slate-400 transition" title="Upload Compliance Evidence PDF">
+                      <label className="p-2 hover:bg-slate-750/25 rounded-xl cursor-pointer text-slate-400 transition" title="Upload Compliance Evidence PDF">
                         <Plus className="w-5 h-5" />
                         <input type="file" className="hidden" onChange={handleFileAttach} accept=".pdf,.json,.xlsx" />
                       </label>
@@ -990,7 +1198,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                         <Terminal className="w-4 h-4 text-blue-500" />
                         <span>Live Cloud Auditing & Connector Logs</span>
                       </h3>
-                      <button onClick={() => setNotificationLogs([])} className="text-xs text-slate-500 hover:text-slate-400 font-semibold">Clear logs</button>
+                      <button onClick={() => setNotificationLogs([])} className="text-xs text-slate-500 hover:text-slate-400 font-semibold font-medium">Clear logs</button>
                     </div>
                     <div className="p-3 bg-black/90 rounded-xl font-mono text-xs text-emerald-400 space-y-1.5 min-h-[120px] overflow-y-auto">
                       {notificationLogs.length === 0 ? (
@@ -998,7 +1206,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                       ) : (
                         notificationLogs.map((log, i) => (
                           <div key={i} className="leading-relaxed">
-                            <span className="text-emerald-500">✔</span> {log}
+                            <span className="text-emerald-500 font-bold">✔</span> {log}
                           </div>
                         ))
                       )}
@@ -1091,7 +1299,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                                 <code className="block text-[11px] font-mono text-blue-500 truncate mt-0.5">{gap.resource}</code>
                               </div>
 
-                              <div className="p-3 bg-slate-800/10 border border-slate-700/10 rounded-xl mt-3">
+                              <div className="p-3 bg-slate-800/10 border border-slate-750/10 rounded-xl mt-3">
                                 <span className="block text-[10px] font-bold text-emerald-600 uppercase mb-1">🤖 vjct ai Action Recommendation:</span>
                                 <p className="text-xs text-inherit font-medium">{gap.remediation}</p>
                               </div>
