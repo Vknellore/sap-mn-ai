@@ -1,0 +1,14 @@
+{
+  "name": "vjct-ai-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend --legacy-peer-deps",
+    "build:all": "npm run build --prefix frontend",
+    "start": "npx concurrently \"node backend/server.js\" \"npm run start --prefix frontend\"",
+    "start:dev": "npx concurrently \"node backend/server.js\" \"npm run dev --prefix frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

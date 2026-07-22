@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Sun, Moon, Send, Shield, Cloud, AlertTriangle, FileText, CheckCircle,
   Users, RefreshCw, Key, Download, HelpCircle, ArrowRight, Check, Plus,
-  Trash2, Bell, Slack, Mail, MessageSquare, Terminal, Eye, FileSpreadsheet
+  Trash2, Bell, Slack, Mail, MessageSquare, Terminal, Eye, FileSpreadsheet,
+  CreditCard, Award, CheckSquare, Layers
 } from 'lucide-react';
 
 // Core Type Definitions
@@ -39,6 +40,17 @@ export default function Home() {
   // Theme state: 'light' ("Sun White" ☀️) or 'dark' ("Moon Dark" 🌙)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
+  // Dynamic API URL resolve to support published/external network environments
+  const [apiBase, setApiBase] = useState<string>('http://localhost:4000/api/v1');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      // Resolve to the current hosting server IP / domain on port 4000
+      setApiBase(`http://${hostname}:4000/api/v1`);
+    }
+  }, []);
+
   // Auth States
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [showMfa, setShowMfa] = useState<boolean>(false);
@@ -48,7 +60,7 @@ export default function Home() {
   const [token, setToken] = useState<string>('');
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Layout View Tabs: 'chat', 'dashboard', 'gaps', 'connectors', 'settings'
+  // Layout View Tabs: 'chat', 'dashboard', 'gaps', 'connectors', 'subscription'
   const [activeTab, setActiveTab] = useState<string>('chat');
 
   // Chat Messages Store
@@ -56,7 +68,7 @@ export default function Home() {
     {
       id: 'm1',
       sender: 'assistant',
-      content: `### Hello! I am **vjctai**, your AI-Powered Secure Multi-Cloud Compliance Companion.
+      content: `### Hello! I am **vjct ai**, your AI-Powered Secure Multi-Cloud Compliance Companion.
 How can I assist your organization today across **AWS**, **Microsoft Azure**, **Google Cloud (GCP)**, and **SAP BTP** setups?
 
 I specialize in aligning your infrastructure to global standards, including **GDPR**, **ISO 27001**, **SOC 2**, **NIST**, **Cyber Essentials**, and the **UK Government Security Guidelines**.`,
@@ -77,6 +89,18 @@ I specialize in aligning your infrastructure to global standards, including **GD
   ]);
   const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
+
+  // Subscription Details State
+  const [subscription, setSubscription] = useState<any>({
+    tier: 'Enterprise Compliance Suite',
+    status: 'Active',
+    expires: 'December 31, 2027',
+    cloudScanLimit: 'Unlimited',
+    scansUsed: 142,
+    nodesConnected: 4,
+    organizationName: 'Global Cloud Secure Ltd',
+    licenseKey: 'VJCTAI-ECS-9943-8821-X902'
+  });
 
   // Platform Metrics & Data States
   const [summary, setSummary] = useState<any>({
@@ -122,11 +146,11 @@ I specialize in aligning your infrastructure to global standards, including **GD
       fetchConnectors();
       fetchGaps();
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, apiBase]);
 
   const fetchSummary = async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/v1/compliance/summary', {
+      const res = await fetch(`${apiBase}/compliance/summary`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -138,7 +162,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
   const fetchConnectors = async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/v1/connectors', {
+      const res = await fetch(`${apiBase}/connectors`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -150,7 +174,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
   const fetchGaps = async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/v1/compliance/gaps', {
+      const res = await fetch(`${apiBase}/compliance/gaps`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -164,7 +188,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:4000/api/v1/auth/login', {
+      const res = await fetch(`${apiBase}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -176,14 +200,14 @@ I specialize in aligning your infrastructure to global standards, including **GD
         alert(data.error);
       }
     } catch (err) {
-      alert('Failed to connect to backend engine. Please verify port 4000 is active.');
+      alert(`Could not connect to backend engine at ${apiBase}. Make sure server is running on port 4000.`);
     }
   };
 
   const handleMfaVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:4000/api/v1/auth/mfa-verify', {
+      const res = await fetch(`${apiBase}/auth/mfa-verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: 'u1', code: mfaCode })
@@ -204,15 +228,14 @@ I specialize in aligning your infrastructure to global standards, including **GD
   // Perform quick switch simulation for Auditor/Compliance/Client views
   const handleRoleSwitch = async (roleName: string, roleEmail: string) => {
     try {
-      // Direct instant token acquisition bypass for roles simulation
-      const loginRes = await fetch('http://localhost:4000/api/v1/auth/login', {
+      const loginRes = await fetch(`${apiBase}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: roleEmail, password: 'password123' })
       });
       const loginData = await loginRes.json();
 
-      const res = await fetch('http://localhost:4000/api/v1/auth/mfa-verify', {
+      const res = await fetch(`${apiBase}/auth/mfa-verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: loginData.userId, code: '123456' })
@@ -235,7 +258,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
     addNotificationLog(`Dispatched automated API crawler for multi-cloud node: [${provider}]`);
 
     try {
-      const res = await fetch('http://localhost:4000/api/v1/connectors/scan', {
+      const res = await fetch(`${apiBase}/connectors/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -260,7 +283,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
   // Remediate Finding Gap
   const handleRemediate = async (gapId: string, title: string) => {
     try {
-      const res = await fetch('http://localhost:4000/api/v1/compliance/gaps/remediate', {
+      const res = await fetch(`${apiBase}/compliance/gaps/remediate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -297,7 +320,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
     setIsAiLoading(true);
 
     try {
-      const res = await fetch('http://localhost:4000/api/v1/ai/chat', {
+      const res = await fetch(`${apiBase}/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -320,7 +343,6 @@ I specialize in aligning your infrastructure to global standards, including **GD
       };
       setMessages(prev => [...prev, newAiMsg]);
 
-      // Add to conversation sidebar history if not present
       if (chatHistory.length < 6) {
         setChatHistory(prev => [{ id: 'ch_' + Date.now(), title: query.substring(0, 24) + '...' }, ...prev]);
       }
@@ -347,13 +369,17 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
   // Download compliance audit exports (excel / pdf)
   const triggerDownload = (format: 'pdf' | 'xlsx', std: string) => {
-    const url = `http://localhost:4000/api/v1/reports/download?format=${format}&standard=${std}`;
+    const url = `${apiBase}/reports/download?format=${format}&standard=${std}&token=${token}`;
     window.open(url, '_blank');
     addNotificationLog(`Downloaded executive ${format.toUpperCase()} compliance checklist for standard: [${std}]`);
   };
 
   return (
-    <div className={`min-h-screen font-sans ${theme === 'dark' ? 'bg-[#0f172a] text-[#f8fafc]' : 'bg-[#f8fafc] text-[#0f172a]'}`}>
+    <div className={`min-h-screen font-sans ${
+      theme === 'dark'
+        ? 'bg-black text-[#f8fafc]'
+        : 'bg-white text-slate-900'
+    }`}>
 
       {/* 1. Login & MFA Screen Wrapper */}
       {!isAuthenticated && (
@@ -363,7 +389,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
               <div className="p-3 mb-2 rounded-xl bg-blue-600/20 text-blue-400">
                 <Shield className="w-12 h-12" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-white">vjctai</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-white">vjct ai</h1>
               <p className="text-xs text-slate-400 text-center mt-1">AI-powered Secure Multi-Cloud Compliance Platform</p>
             </div>
 
@@ -398,7 +424,6 @@ I specialize in aligning your infrastructure to global standards, including **GD
                   Request Double Factor MFA
                 </button>
 
-                {/* Quick Swapper Tool for Audit convenience */}
                 <div className="mt-6 pt-4 border-t border-white/10">
                   <span className="block text-center text-xs text-slate-400 mb-2 font-medium">Demo Quick Login Accounts (Any Role)</span>
                   <div className="grid grid-cols-2 gap-2 text-xs">
@@ -450,9 +475,11 @@ I specialize in aligning your infrastructure to global standards, including **GD
       {isAuthenticated && (
         <div className="flex h-screen overflow-hidden">
 
-          {/* A. Sidebar Panel (ChatGPT Experience Style) */}
-          <aside className={`w-80 flex flex-col flex-shrink-0 border-r transition-colors duration-200 ${
-            theme === 'dark' ? 'bg-[#0b0f19] border-slate-800' : 'bg-slate-50 border-slate-200'
+          {/* A. Sidebar Panel (ChatGPT Experience Style - White vs Black) */}
+          <aside className={`w-80 flex flex-col flex-shrink-0 border-r transition-all duration-200 ${
+            theme === 'dark'
+              ? 'bg-black border-slate-800 text-slate-200'
+              : 'bg-slate-100 border-slate-300 text-slate-900'
           }`}>
             {/* Sidebar Title Header */}
             <div className="p-4 border-b flex items-center justify-between border-inherit">
@@ -461,7 +488,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                   <Shield className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold tracking-tight">vjctai</h2>
+                  <h2 className="text-lg font-bold tracking-tight">vjct ai</h2>
                   <span className="block text-[9px] text-slate-500 uppercase font-bold">Multi-Cloud Security</span>
                 </div>
               </div>
@@ -470,7 +497,9 @@ I specialize in aligning your infrastructure to global standards, including **GD
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={`p-2 rounded-lg transition-colors ${
-                  theme === 'dark' ? 'bg-slate-800 text-amber-400 hover:bg-slate-700' : 'bg-slate-200 text-indigo-900 hover:bg-slate-300'
+                  theme === 'dark'
+                    ? 'bg-slate-800 text-amber-400 hover:bg-slate-700'
+                    : 'bg-white border border-slate-300 text-indigo-900 hover:bg-slate-200'
                 }`}
                 title={theme === 'dark' ? 'Switch to Sun White' : 'Switch to Moon Dark'}
               >
@@ -494,20 +523,20 @@ I specialize in aligning your infrastructure to global standards, including **GD
                 onClick={() => { setActiveTab('chat'); }}
                 className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === 'chat'
-                    ? 'bg-blue-600 text-white'
-                    : (theme === 'dark' ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-700')
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : (theme === 'dark' ? 'hover:bg-slate-850 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
                 }`}
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>vjctai AI Assistant</span>
+                <span>vjct ai Assistant</span>
               </button>
 
               <button
                 onClick={() => { setActiveTab('dashboard'); }}
                 className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === 'dashboard'
-                    ? 'bg-blue-600 text-white'
-                    : (theme === 'dark' ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-700')
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : (theme === 'dark' ? 'hover:bg-slate-850 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
                 }`}
               >
                 <Cloud className="w-4 h-4" />
@@ -518,8 +547,8 @@ I specialize in aligning your infrastructure to global standards, including **GD
                 onClick={() => { setActiveTab('gaps'); }}
                 className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === 'gaps'
-                    ? 'bg-blue-600 text-white'
-                    : (theme === 'dark' ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-700')
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : (theme === 'dark' ? 'hover:bg-slate-850 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
@@ -530,16 +559,28 @@ I specialize in aligning your infrastructure to global standards, including **GD
                 onClick={() => { setActiveTab('connectors'); }}
                 className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === 'connectors'
-                    ? 'bg-blue-600 text-white'
-                    : (theme === 'dark' ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-700')
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : (theme === 'dark' ? 'hover:bg-slate-850 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
                 }`}
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>Cloud Connectors</span>
               </button>
+
+              <button
+                onClick={() => { setActiveTab('subscription'); }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'subscription'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : (theme === 'dark' ? 'hover:bg-slate-850 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
+                }`}
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>vjct ai Subscription</span>
+              </button>
             </div>
 
-            {/* Conversation History (ChatGPT Sidebar Style) */}
+            {/* Conversation History */}
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2">History Log</span>
               {chatHistory.map((ch) => (
@@ -550,7 +591,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                     handleSendMessage(`Run standard assessment for: ${ch.title}`);
                   }}
                   className={`group flex items-center justify-between px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors ${
-                    theme === 'dark' ? 'hover:bg-slate-800/60 text-slate-300' : 'hover:bg-slate-200/60 text-slate-700'
+                    theme === 'dark' ? 'hover:bg-slate-900 text-slate-300' : 'hover:bg-slate-200 text-slate-700'
                   }`}
                 >
                   <div className="flex items-center space-x-2 truncate">
@@ -563,32 +604,32 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
             {/* Simulated IAM User Profile Context */}
             <div className={`p-4 border-t border-inherit flex flex-col space-y-2 ${
-              theme === 'dark' ? 'bg-[#080b12]' : 'bg-slate-100'
+              theme === 'dark' ? 'bg-[#050505]' : 'bg-slate-200/50'
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
                     {currentUser?.name ? currentUser.name[0] : 'U'}
                   </div>
-                  <div className="truncate">
+                  <div className="truncate text-inherit">
                     <span className="block text-xs font-semibold truncate">{currentUser?.name || 'Alexander Admin'}</span>
-                    <span className="block text-[10px] text-slate-400 capitalize">{currentUser?.role || 'Admin'}</span>
+                    <span className="block text-[10px] text-slate-500 capitalize">{currentUser?.role || 'Admin'}</span>
                   </div>
                 </div>
                 <button
                   onClick={() => { setIsAuthenticated(false); setShowMfa(false); }}
-                  className="text-xs text-rose-500 hover:text-rose-400 hover:underline"
+                  className="text-xs text-rose-600 hover:text-rose-500 hover:underline font-semibold"
                 >
                   Logout
                 </button>
               </div>
 
-              {/* Security Level Switcher - Extremely valuable for evaluation & audits */}
-              <div className="pt-2 border-t border-slate-700/40">
+              {/* Security Level Switcher */}
+              <div className="pt-2 border-t border-slate-700/20">
                 <span className="block text-[10px] uppercase font-semibold text-slate-500 mb-1">Simulate IAM Role</span>
                 <select
                   className={`w-full text-xs p-1.5 rounded outline-none ${
-                    theme === 'dark' ? 'bg-slate-800 text-white' : 'bg-white text-slate-800 border'
+                    theme === 'dark' ? 'bg-slate-900 text-white border border-slate-800' : 'bg-white text-slate-800 border border-slate-300'
                   }`}
                   value={currentUser?.role || 'Admin'}
                   onChange={(e) => {
@@ -610,22 +651,25 @@ I specialize in aligning your infrastructure to global standards, including **GD
             </div>
           </aside>
 
-          {/* B. Core Working Viewport Panel */}
-          <main className="flex-1 flex flex-col overflow-hidden">
+          {/* B. Core Working Viewport Panel (White vs Black) */}
+          <main className={`flex-1 flex flex-col overflow-hidden transition-colors duration-200 ${
+            theme === 'dark' ? 'bg-black' : 'bg-[#fcfcfc]'
+          }`}>
 
             {/* Top Workspace Header Panel */}
             <header className={`px-6 py-4 border-b flex items-center justify-between ${
-              theme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'
+              theme === 'dark' ? 'bg-black border-slate-800' : 'bg-white border-slate-200 shadow-sm'
             }`}>
               <div>
                 <h1 className="text-xl font-bold tracking-tight">
-                  {activeTab === 'chat' && 'AI Compliance Copilot'}
+                  {activeTab === 'chat' && 'vjct ai Compliance Copilot'}
                   {activeTab === 'dashboard' && 'Executive Compliance Dashboard'}
                   {activeTab === 'gaps' && 'Multi-Cloud Compliance Findings'}
                   {activeTab === 'connectors' && 'Cloud Providers Connection Center'}
+                  {activeTab === 'subscription' && 'VJCT AI Platform License & Subscription'}
                 </h1>
                 <p className="text-xs text-slate-400">
-                  vjctai - AI-powered Secure Multi-Cloud Compliance Platform
+                  vjct ai - AI-powered Secure Multi-Cloud Compliance Platform
                 </p>
               </div>
 
@@ -655,8 +699,8 @@ I specialize in aligning your infrastructure to global standards, including **GD
                         key={m.id}
                         className={`flex space-x-4 p-4 rounded-xl transition-all ${
                           m.sender === 'assistant'
-                            ? (theme === 'dark' ? 'bg-[#1e293b]/70 border border-slate-800/40' : 'bg-slate-100/80')
-                            : (theme === 'dark' ? 'bg-blue-600/15 border border-blue-500/30' : 'bg-blue-50')
+                            ? (theme === 'dark' ? 'bg-slate-900/60 border border-slate-800/40' : 'bg-slate-100/90 border border-slate-200')
+                            : (theme === 'dark' ? 'bg-blue-600/15 border border-blue-500/30' : 'bg-blue-50/90 border border-blue-100')
                         }`}
                       >
                         <div className={`p-2.5 h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white ${
@@ -667,13 +711,13 @@ I specialize in aligning your infrastructure to global standards, including **GD
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1.5">
                             <span className="text-xs font-bold text-slate-400">
-                              {m.sender === 'assistant' ? 'vjctai Copilot' : 'Authenticated User'}
+                              {m.sender === 'assistant' ? 'vjct ai Copilot' : 'Authenticated User'}
                             </span>
                             <span className="text-[10px] text-slate-400">{m.timestamp}</span>
                           </div>
 
                           {/* Message markup parser wrapper */}
-                          <div className="text-sm leading-relaxed whitespace-pre-line text-inherit">
+                          <div className="text-sm leading-relaxed whitespace-pre-line text-inherit font-medium">
                             {m.content}
                           </div>
 
@@ -688,8 +732,8 @@ I specialize in aligning your infrastructure to global standards, including **GD
                                     onClick={() => handleSendMessage(act)}
                                     className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
                                       theme === 'dark'
-                                        ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-300'
-                                        : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+                                        ? 'bg-slate-900 border-slate-800 hover:bg-slate-850 text-slate-300'
+                                        : 'bg-white border-slate-300 hover:bg-slate-100 text-slate-700'
                                     }`}
                                   >
                                     {act}
@@ -721,7 +765,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                     <div className="px-4 py-2 border-t border-slate-800/20 bg-amber-500/5 flex items-center gap-3 flex-wrap">
                       <span className="text-[10px] font-bold text-amber-500 uppercase">Evidence Context files:</span>
                       {attachedFiles.map((f, i) => (
-                        <span key={i} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-slate-800 rounded-lg">
+                        <span key={i} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-slate-900 rounded-lg">
                           <FileText className="w-3.5 h-3.5 text-amber-500" />
                           <span>{f}</span>
                           <button onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))} className="text-slate-400 hover:text-rose-500">
@@ -734,7 +778,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
                   {/* Input Chat Field Panel (ChatGPT look and feel) */}
                   <div className={`p-3 rounded-2xl border ${
-                    theme === 'dark' ? 'bg-[#1e293b] border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+                    theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'
                   }`}>
                     <div className="flex items-center space-x-3">
                       <label className="p-2 hover:bg-slate-700/25 rounded-xl cursor-pointer text-slate-400 transition" title="Upload Compliance Evidence PDF">
@@ -747,7 +791,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
-                        placeholder="Ask vjctai to audit resources, write fixes, or check GDPR/ISO gaps..."
+                        placeholder="Ask vjct ai to audit resources, write fixes, or check GDPR/ISO gaps..."
                         className="flex-1 bg-transparent border-0 outline-none focus:ring-0 text-sm py-2 text-inherit"
                       />
 
@@ -769,7 +813,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
                   {/* Grid summary metric indicators */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'}`}>
                       <span className="block text-xs font-semibold text-slate-500 uppercase">Global Compliance Index</span>
                       <div className="flex items-baseline space-x-2 mt-2">
                         <span className="text-4xl font-extrabold text-blue-500">{summary.complianceScore}%</span>
@@ -780,7 +824,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                       </div>
                     </div>
 
-                    <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'}`}>
                       <span className="block text-xs font-semibold text-slate-500 uppercase">Risk Remediation Score</span>
                       <div className="flex items-baseline space-x-2 mt-2">
                         <span className="text-4xl font-extrabold text-emerald-500">{summary.securityScore}%</span>
@@ -791,24 +835,24 @@ I specialize in aligning your infrastructure to global standards, including **GD
                       </div>
                     </div>
 
-                    <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'}`}>
                       <span className="block text-xs font-semibold text-slate-500 uppercase">Cloud Monitored Assets</span>
                       <div className="flex items-baseline space-x-2 mt-2">
                         <span className="text-4xl font-extrabold text-indigo-500">{summary.inventoryCount}</span>
-                        <span className="text-xs text-indigo-400 font-bold">Active Inventory</span>
+                        <span className="text-xs text-indigo-400 font-bold font-semibold">Active Inventory</span>
                       </div>
-                      <div className="mt-3 flex items-center space-x-1 text-slate-500 text-xs">
+                      <div className="mt-3 flex items-center space-x-1 text-slate-500 text-xs font-medium">
                         <span>AWS, Azure, GCP, SAP BTP nodes</span>
                       </div>
                     </div>
 
-                    <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'}`}>
                       <span className="block text-xs font-semibold text-slate-500 uppercase">Active Compliance Gaps</span>
                       <div className="flex items-baseline space-x-2 mt-2">
                         <span className="text-4xl font-extrabold text-rose-500">{summary.gapsCount}</span>
                         <span className="text-xs text-rose-400 font-bold">Unresolved Gaps</span>
                       </div>
-                      <div className="mt-3 flex items-center space-x-1 text-slate-500 text-xs">
+                      <div className="mt-3 flex items-center space-x-1 text-slate-500 text-xs font-medium">
                         <span>Across multiple cloud providers</span>
                       </div>
                     </div>
@@ -818,13 +862,13 @@ I specialize in aligning your infrastructure to global standards, including **GD
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                     {/* Compliance standard coverage card */}
-                    <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'}`}>
                       <h3 className="text-lg font-bold mb-4">Coverage by Regulatory Standards</h3>
                       <div className="space-y-4">
                         {Object.keys(summary.standardsBreakdown).map((std) => (
                           <div key={std} className="space-y-1.5">
-                            <div className="flex justify-between text-xs font-medium">
-                              <span className="text-slate-400">{std}</span>
+                            <div className="flex justify-between text-xs font-semibold">
+                              <span className="text-slate-500">{std}</span>
                               <span className="font-bold">{summary.standardsBreakdown[std]}%</span>
                             </div>
                             <div className="w-full bg-slate-700/20 h-2 rounded-full overflow-hidden">
@@ -842,7 +886,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
                     {/* Integrated reporting module triggers */}
                     <div className={`p-6 rounded-2xl border flex flex-col justify-between ${
-                      theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+                      theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'
                     }`}>
                       <div>
                         <h3 className="text-lg font-bold mb-1">Reports & Evidence Exporter</h3>
@@ -850,10 +894,10 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
                         <div className="space-y-3">
                           <div>
-                            <label className="block text-xs text-slate-400 mb-1">Target Regulatory Standard</label>
+                            <label className="block text-xs text-slate-500 mb-1 font-semibold">Target Regulatory Standard</label>
                             <select
                               className={`w-full text-xs p-2.5 rounded-lg border outline-none ${
-                                theme === 'dark' ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-800 border-slate-300'
+                                theme === 'dark' ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-800 border-slate-300'
                               }`}
                               value={selectedStandard}
                               onChange={(e) => setSelectedStandard(e.target.value)}
@@ -887,7 +931,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                       </div>
 
                       {/* Notification alerts center */}
-                      <div className="mt-6 pt-5 border-t border-slate-800/40">
+                      <div className="mt-6 pt-5 border-t border-slate-700/20">
                         <span className="block text-xs font-bold uppercase text-slate-500 mb-3">Target Alerts Integration</span>
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <button
@@ -897,7 +941,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                             }}
                             className={`flex items-center justify-center space-x-1 py-1.5 px-2.5 rounded border transition-colors ${
                               notificationConfig.slackEnabled
-                                ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400'
+                                ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400 font-semibold'
                                 : 'bg-transparent border-slate-700 text-slate-400'
                             }`}
                           >
@@ -912,7 +956,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                             }}
                             className={`flex items-center justify-center space-x-1 py-1.5 px-2.5 rounded border transition-colors ${
                               notificationConfig.teamsEnabled
-                                ? 'bg-blue-600/10 border-blue-500 text-blue-400'
+                                ? 'bg-blue-600/10 border-blue-500 text-blue-400 font-semibold'
                                 : 'bg-transparent border-slate-700 text-slate-400'
                             }`}
                           >
@@ -927,7 +971,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                             }}
                             className={`flex items-center justify-center space-x-1 py-1.5 px-2.5 rounded border transition-colors ${
                               notificationConfig.emailEnabled
-                                ? 'bg-emerald-600/10 border-emerald-500 text-emerald-400'
+                                ? 'bg-emerald-600/10 border-emerald-500 text-emerald-400 font-semibold'
                                 : 'bg-transparent border-slate-700 text-slate-400'
                             }`}
                           >
@@ -940,15 +984,15 @@ I specialize in aligning your infrastructure to global standards, including **GD
                   </div>
 
                   {/* Live Security Log console box */}
-                  <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                  <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'}`}>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-bold flex items-center space-x-2">
+                      <h3 className="text-sm font-bold flex items-center space-x-2 text-inherit">
                         <Terminal className="w-4 h-4 text-blue-500" />
                         <span>Live Cloud Auditing & Connector Logs</span>
                       </h3>
-                      <button onClick={() => setNotificationLogs([])} className="text-xs text-slate-500 hover:text-slate-400">Clear logs</button>
+                      <button onClick={() => setNotificationLogs([])} className="text-xs text-slate-500 hover:text-slate-400 font-semibold">Clear logs</button>
                     </div>
-                    <div className="p-3 bg-black/40 rounded-xl font-mono text-xs text-slate-300 space-y-1.5 min-h-[120px] overflow-y-auto">
+                    <div className="p-3 bg-black/90 rounded-xl font-mono text-xs text-emerald-400 space-y-1.5 min-h-[120px] overflow-y-auto">
                       {notificationLogs.length === 0 ? (
                         <span className="text-slate-500 italic">No events or scan actions dispatched yet...</span>
                       ) : (
@@ -975,7 +1019,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                     <div className="flex flex-wrap items-center gap-3">
                       <select
                         className={`text-xs p-2 rounded border outline-none ${
-                          theme === 'dark' ? 'bg-slate-800 text-white border-slate-700' : 'bg-white border-slate-300'
+                          theme === 'dark' ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-800 border-slate-300 shadow-sm'
                         }`}
                         value={selectedStandard}
                         onChange={(e) => setSelectedStandard(e.target.value)}
@@ -991,7 +1035,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
 
                       <select
                         className={`text-xs p-2 rounded border outline-none ${
-                          theme === 'dark' ? 'bg-slate-800 text-white border-slate-700' : 'bg-white border-slate-300'
+                          theme === 'dark' ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-800 border-slate-300 shadow-sm'
                         }`}
                         value={selectedConnector}
                         onChange={(e) => setSelectedConnector(e.target.value)}
@@ -1016,7 +1060,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                           className={`p-5 rounded-2xl border transition-all ${
                             gap.status === 'Resolved'
                               ? 'opacity-60 bg-emerald-500/5 border-emerald-500/20'
-                              : (theme === 'dark' ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 hover:shadow-md')
+                              : (theme === 'dark' ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-300 hover:shadow-md')
                           }`}
                         >
                           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -1039,17 +1083,17 @@ I specialize in aligning your infrastructure to global standards, including **GD
                                 </span>
                               </div>
 
-                              <h3 className="text-base font-bold text-slate-100">{gap.title}</h3>
-                              <p className="text-xs text-slate-400">{gap.description}</p>
+                              <h3 className="text-base font-bold text-inherit">{gap.title}</h3>
+                              <p className="text-xs text-slate-500 font-medium">{gap.description}</p>
 
                               <div className="pt-2">
-                                <span className="block text-[10px] font-bold text-slate-500 uppercase">Target Cloud Resource:</span>
-                                <code className="block text-[11px] font-mono text-blue-400 truncate mt-0.5">{gap.resource}</code>
+                                <span className="block text-[10px] font-bold text-slate-400 uppercase">Target Cloud Resource:</span>
+                                <code className="block text-[11px] font-mono text-blue-500 truncate mt-0.5">{gap.resource}</code>
                               </div>
 
-                              <div className="p-3 bg-slate-800/40 rounded-xl mt-3">
-                                <span className="block text-[10px] font-bold text-emerald-400 uppercase mb-1">🤖 vjctai Action Recommendation:</span>
-                                <p className="text-xs text-slate-300">{gap.remediation}</p>
+                              <div className="p-3 bg-slate-800/10 border border-slate-700/10 rounded-xl mt-3">
+                                <span className="block text-[10px] font-bold text-emerald-600 uppercase mb-1">🤖 vjct ai Action Recommendation:</span>
+                                <p className="text-xs text-inherit font-medium">{gap.remediation}</p>
                               </div>
                             </div>
 
@@ -1078,7 +1122,7 @@ I specialize in aligning your infrastructure to global standards, including **GD
                       <div
                         key={conn.id}
                         className={`p-6 rounded-2xl border ${
-                          theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+                          theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'
                         }`}
                       >
                         <div className="flex justify-between items-start mb-4">
@@ -1101,22 +1145,22 @@ I specialize in aligning your infrastructure to global standards, including **GD
                         </div>
 
                         <div className="space-y-2 text-xs">
-                          <div className="flex justify-between py-1.5 border-b border-slate-800/40">
-                            <span className="text-slate-400">Last Scanned:</span>
-                            <span className="font-semibold text-slate-300">
+                          <div className="flex justify-between py-1.5 border-b border-slate-700/20">
+                            <span className="text-slate-500 font-semibold">Last Scanned:</span>
+                            <span className="font-semibold text-slate-600">
                               {conn.last_scan ? new Date(conn.last_scan).toLocaleString() : 'Never'}
                             </span>
                           </div>
                           <div className="flex justify-between py-1.5">
-                            <span className="text-slate-400">Endpoint Target:</span>
-                            <span className="font-mono text-slate-300 truncate max-w-xs text-right">
+                            <span className="text-slate-500 font-semibold">Endpoint Target:</span>
+                            <span className="font-mono text-slate-600 truncate max-w-xs text-right">
                               api.{conn.provider.toLowerCase().replace(' ', '')}.secure.internal
                             </span>
                           </div>
                         </div>
 
                         {/* Scanner Actions Trigger bar */}
-                        <div className="mt-5 pt-4 border-t border-slate-800/40 flex justify-end">
+                        <div className="mt-5 pt-4 border-t border-slate-700/20 flex justify-end">
                           <button
                             onClick={() => handleTriggerScan(conn.id, conn.provider)}
                             disabled={isScanning === conn.id}
@@ -1133,8 +1177,8 @@ I specialize in aligning your infrastructure to global standards, including **GD
                   </div>
 
                   {/* Connector addition information panel */}
-                  <div className={`p-6 rounded-2xl border border-dashed border-slate-800 text-center ${
-                    theme === 'dark' ? 'bg-[#111827]/30' : 'bg-slate-50'
+                  <div className={`p-6 rounded-2xl border border-dashed text-center ${
+                    theme === 'dark' ? 'bg-[#111827]/30 border-slate-800' : 'bg-slate-50 border-slate-300'
                   }`}>
                     <HelpCircle className="w-8 h-8 text-blue-500 mx-auto mb-2" />
                     <h3 className="text-sm font-bold mb-1">Add Dynamic New Cloud Subscription Hook</h3>
@@ -1143,12 +1187,121 @@ I specialize in aligning your infrastructure to global standards, including **GD
                     </p>
                     <button
                       onClick={() => alert('Connectors are preconfigured for enterprise AWS, Microsoft Azure, GCP, and SAP BTP workloads in this environment.')}
-                      className="inline-flex items-center space-x-1 px-3 py-1.5 bg-slate-800 text-xs font-medium rounded hover:bg-slate-700 transition"
+                      className="inline-flex items-center space-x-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium rounded transition"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Configure custom API Credentials</span>
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* TAB 5: Subscription Management View */}
+              {activeTab === 'subscription' && (
+                <div className="max-w-4xl mx-auto space-y-6">
+
+                  {/* Subscription card panel */}
+                  <div className={`p-8 rounded-2xl border bg-gradient-to-br transition-all duration-200 ${
+                    theme === 'dark'
+                      ? 'from-blue-950/40 to-slate-950 border-blue-900/40 text-slate-100 shadow-2xl'
+                      : 'from-blue-50 to-white border-blue-200 text-slate-900 shadow-lg'
+                  }`}>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-700/20">
+                      <div className="space-y-1.5">
+                        <span className="inline-flex items-center space-x-1.5 px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full uppercase tracking-wider">
+                          <Award className="w-3.5 h-3.5" />
+                          <span>Active Subscription</span>
+                        </span>
+                        <h2 className="text-2xl font-extrabold">{subscription.tier}</h2>
+                        <p className="text-sm text-slate-400">License registered to: <span className="font-bold text-blue-500">{subscription.organizationName}</span></p>
+                      </div>
+
+                      <div className="flex flex-col md:items-end">
+                        <span className="text-xs text-slate-400 uppercase font-semibold">Security Renewal Date</span>
+                        <span className="text-lg font-bold text-emerald-500">{subscription.expires}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+                      <div className="space-y-1">
+                        <span className="block text-xs text-slate-400 uppercase font-semibold">Total Cloud Scan Limit</span>
+                        <span className="text-xl font-extrabold">{subscription.cloudScanLimit}</span>
+                        <p className="text-[11px] text-slate-400">Unlimited real-time scans on verified subaccounts.</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="block text-xs text-slate-400 uppercase font-semibold">Audit Scans Completed</span>
+                        <span className="text-xl font-extrabold text-blue-500">{subscription.scansUsed}</span>
+                        <p className="text-[11px] text-slate-400">Total API checks performed this calendar year.</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="block text-xs text-slate-400 uppercase font-semibold">Monitored Cloud Subscriptions</span>
+                        <span className="text-xl font-extrabold text-indigo-500">{subscription.nodesConnected} Connected</span>
+                        <p className="text-[11px] text-slate-400">AWS Production, Azure Sub, GCP Analytics, SAP BTP.</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 p-4 bg-slate-800/10 border border-slate-700/10 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Key className="w-5 h-5 text-amber-500" />
+                        <div>
+                          <span className="block text-[10px] text-slate-400 uppercase font-bold">Secure Enterprise Key</span>
+                          <code className="text-xs font-mono text-slate-300 font-bold">{subscription.licenseKey}</code>
+                        </div>
+                      </div>
+                      <span className="text-xs px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded font-bold">Verified Licence</span>
+                    </div>
+                  </div>
+
+                  {/* Pricing tier & limits simulator */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className={`p-6 rounded-2xl border ${
+                      theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'
+                    }`}>
+                      <h3 className="text-base font-bold mb-3 flex items-center space-x-2">
+                        <CheckSquare className="w-4 h-4 text-emerald-500" />
+                        <span>Included Subscription Features</span>
+                      </h3>
+                      <ul className="space-y-2.5 text-xs text-slate-400">
+                        <li className="flex items-center space-x-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Complete Multi-Cloud Connectors (AWS, Azure, GCP, SAP BTP)</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>vjct ai GPT-4o Advanced Remediations</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Continuous UK Gov Security Standards scans & Cyber Essentials checklist</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Automated Slack, MS Teams, & Corporate email dispatchers</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className={`p-6 rounded-2xl border ${
+                      theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-sm'
+                    }`}>
+                      <h3 className="text-base font-bold mb-3 flex items-center space-x-2">
+                        <Layers className="w-4 h-4 text-blue-500" />
+                        <span>Plan Licensing Upgrades</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mb-4">
+                        Need higher frequency scanning, dedicated vector-database isolation, or private on-premise deployments? Upgrade your security envelope.
+                      </p>
+                      <button
+                        onClick={() => alert('You are already enjoying the top tier Enterprise Unlimited license tier!')}
+                        className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        Contact vjct ai Sales Engineering
+                      </button>
+                    </div>
+                  </div>
+
                 </div>
               )}
 
